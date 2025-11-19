@@ -14,6 +14,7 @@ MBTA_BASE_URL = "https://api-v3.mbta.com/stops"
 def get_json(url: str, params: dict = None):
     """Return parsed JSON from a URL request."""
     response = requests.get(url, params=params)
+    print ("REQUEST URL:", response.url)  # DEBUG
     response.raise_for_status()
     return response.json()
 
