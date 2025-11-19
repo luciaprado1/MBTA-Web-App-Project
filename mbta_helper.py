@@ -1,70 +1,107 @@
 import os
-import json
-import urllib.request
-
+import requests
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load .env file (MBTA_API_KEY and MAPBOX_TOKEN)
 load_dotenv()
 
-# Get API keys from environment variables
 MAPBOX_TOKEN = os.getenv("MAPBOX_TOKEN")
 MBTA_API_KEY = os.getenv("MBTA_API_KEY")
 
-# Optional: helpful error messages if keys are missing
 if MAPBOX_TOKEN is None:
     raise RuntimeError("MAPBOX_TOKEN is not set. Check your .env file.")
+
 if MBTA_API_KEY is None:
     raise RuntimeError("MBTA_API_KEY is not set. Check your .env file.")
 
-# Useful base URLs (you need to add the appropriate parameters for each API request)
 MAPBOX_BASE_URL = "https://api.mapbox.com/search/searchbox/v1/forward"
-MBTA_BASE_URL = "https://api-v3.mbta.com/"
+MBTA_STOPS_URL = "https://api-v3.mbta.com/stops"
 
 
-# A little bit of scaffolding if you want to use it
-def get_json(url: str) -> dict:
+def get_json(url, params=None):
     """
-    Given a properly formatted URL for a JSON web API request, return a Python JSON object containing the response to that request.
-
-    Both get_lat_lng() and get_nearest_station() might need to use this function.
+    Helper to send a GET request and return JSON.
     """
-    pass
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    return resp.json()
 
 
-def get_lat_lng(place_name: str) -> tuple[str, str]:
+def get_lat_lon(place_name):
     """
-    Given a place name or address, return a (latitude, longitude) tuple with the coordinates of the given place.
-
-    See https://docs.mapbox.com/api/search/search-box/#search-request for Mapbox Search API URL formatting requirements.
+    Given a place name (e.g. 'Boston Common'),
+    return (lat, lon) using Mapbox Searchbox API.
     """
-    pass
+    params = {
+        "q": place_name,
+        "access_token": MAPBOX_TOKEN,
+        "limit": 1,
+    }
+
+    data = get_json(MAPBOX_BASE_URL, params=params)
+    features = data.get("features", [])
+    if not features:
+        return None, None
+
+    # Searchbox returns center as [lon, lat]
+    center = features[0]["geometry"]["coordinates"]
+    lon, lat = center[0], center[1]
+    return lat, lon
 
 
-def get_nearest_station(latitude: str, longitude: str) -> tuple[str, bool]:
+def get_nearest_station(lat, lon):
     """
-    Given latitude and longitude strings, return a (station_name, wheelchair_accessible) tuple for the nearest MBTA station to the given coordinates. wheelchair_accessible is True if the stop is marked as accessible, False otherwise.
-
-    See https://api-v3.mbta.com/docs/swagger/index.html#/Stop/ApiWeb_StopController_index for URL formatting requirements for the 'GET /stops' API.
+    Given latitude and longitude, return (station_name, accessibility_string).
+    Uses MBTA /stops endpoint.
     """
-    pass
+    params = {
+        "api_key": MBTA_API_KEY,
+        "sort": "distance",
+        "filter[latitude]": lat,
+        "filter[longitude]": lon,
+        "page[limit]": 1,
+    }
+
+    data = get_json(MBTA_STOPS_URL, params=params)
+    stops = data.get("data", [])
+    if not stops:
+        return None, None
+
+    stop = stops[0]
+    attrs = stop["attributes"]
+    name = attrs["name"]
+    wheelchair = attrs.get("wheelchair_boarding")
+
+    if wheelchair == 1:
+        access = "Wheelchair accessible"
+    elif wheelchair == 2:
+        access = "Not wheelchair accessible"
+    else:
+        access = "Accessibility unknown"
+
+    return name, access
 
 
-def find_stop_near(place_name: str) -> tuple[str, bool]:
+def find_stop_near(place_name):
     """
-    Given a place name or address, return the nearest MBTA stop and whether it is wheelchair accessible.
-
-    This function might use all the functions above.
+    Given a place name, combine Mapbox + MBTA to
+    return (nearest_stop_name, accessibility).
     """
-    pass
+    lat, lon = get_lat_lon(place_name)
+    if lat is None or lon is None:
+        return None, None
+
+    return get_nearest_station(lat, lon)
 
 
-def main():
-    """
-    You should test all the above functions here
-    """
-    pass
-
-
+# Simple tests you can run directly
 if __name__ == "__main__":
-    main()
+    test_place = "Boston Common"
+    print("Testing with:", test_place)
+    lat, lon = get_lat_lon(test_place)
+    print("Coordinates:", (lat, lon))
+    station, access = find_stop_near(test_place)
+    print("Nearest station:", station)
+    print("Accessibility:", access)
+
+
