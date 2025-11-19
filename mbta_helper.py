@@ -2,36 +2,24 @@ import os
 import requests
 from dotenv import load_dotenv
 
-# Load .env file (MBTA_API_KEY and MAPBOX_TOKEN)
 load_dotenv()
 
 MAPBOX_TOKEN = os.getenv("MAPBOX_TOKEN")
 MBTA_API_KEY = os.getenv("MBTA_API_KEY")
 
-if MAPBOX_TOKEN is None:
-    raise RuntimeError("MAPBOX_TOKEN is not set. Check your .env file.")
-
-if MBTA_API_KEY is None:
-    raise RuntimeError("MBTA_API_KEY is not set. Check your .env file.")
-
 MAPBOX_BASE_URL = "https://api.mapbox.com/search/searchbox/v1/forward"
-MBTA_STOPS_URL = "https://api-v3.mbta.com/stops"
+MBTA_BASE_URL = "https://api-v3.mbta.com/stops"
 
 
-def get_json(url, params=None):
-    """
-    Helper to send a GET request and return JSON.
-    """
-    resp = requests.get(url, params=params)
-    resp.raise_for_status()
-    return resp.json()
+def get_json(url: str, params: dict = None):
+    """Return parsed JSON from a URL request."""
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    return response.json()
 
 
-def get_lat_lon(place_name):
-    """
-    Given a place name (e.g. 'Boston Common'),
-    return (lat, lon) using Mapbox Searchbox API.
-    """
+def get_lat_lon(place_name: str):
+    """Convert a place name into (lat, lon) using Mapbox."""
     params = {
         "q": place_name,
         "access_token": MAPBOX_TOKEN,
@@ -40,68 +28,62 @@ def get_lat_lon(place_name):
 
     data = get_json(MAPBOX_BASE_URL, params=params)
     features = data.get("features", [])
+
     if not features:
         return None, None
 
-    # Searchbox returns center as [lon, lat]
     center = features[0]["geometry"]["coordinates"]
     lon, lat = center[0], center[1]
     return lat, lon
 
 
 def get_nearest_station(lat, lon):
-    """
-    Given latitude and longitude, return (station_name, accessibility_string).
-    Uses MBTA /stops endpoint.
-    """
+    """Return the closest MBTA station name and wheelchair accessibility."""
+    url = MBTA_BASE_URL
     params = {
         "api_key": MBTA_API_KEY,
         "sort": "distance",
         "filter[latitude]": lat,
         "filter[longitude]": lon,
-        "page[limit]": 1,
     }
 
-    data = get_json(MBTA_STOPS_URL, params=params)
+    data = get_json(url, params=params)
     stops = data.get("data", [])
+
     if not stops:
         return None, None
 
-    stop = stops[0]
-    attrs = stop["attributes"]
-    name = attrs["name"]
-    wheelchair = attrs.get("wheelchair_boarding")
+    first = stops[0]
+    name = first["attributes"]["name"]
+    wheelchair = first["attributes"]["wheelchair_boarding"]
 
     if wheelchair == 1:
-        access = "Wheelchair accessible"
+        accessible = "Wheelchair accessible"
     elif wheelchair == 2:
-        access = "Not wheelchair accessible"
+        accessible = "Not wheelchair accessible"
     else:
-        access = "Accessibility unknown"
+        accessible = "Accessibility unknown"
 
-    return name, access
+    return name, accessible
 
 
-def find_stop_near(place_name):
-    """
-    Given a place name, combine Mapbox + MBTA to
-    return (nearest_stop_name, accessibility).
-    """
+def find_stop_near(place_name: str):
+    """Main function: returns (station, accessibility)."""
     lat, lon = get_lat_lon(place_name)
-    if lat is None or lon is None:
+
+    if lat is None:
         return None, None
 
     return get_nearest_station(lat, lon)
 
 
-# Simple tests you can run directly
 if __name__ == "__main__":
-    test_place = "Boston Common"
-    print("Testing with:", test_place)
-    lat, lon = get_lat_lon(test_place)
+    print("Testing with: Boston Common")
+    lat, lon = get_lat_lon("Boston Common")
     print("Coordinates:", (lat, lon))
-    station, access = find_stop_near(test_place)
+    station, accessible = find_stop_near("Boston Common")
     print("Nearest station:", station)
-    print("Accessibility:", access)
+    print("Accessibility:", accessible)
+
 
 

@@ -1,23 +1,16 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Nearest MBTA Station</title>
-  </head>
-  <body>
-    <h1>Find the Nearest MBTA Station</h1>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MBTA Station Result</title>
+</head>
+<body>
+    <h2>Nearest MBTA Station to "{{ place }}"</h2>
 
-    <form action="/nearest_mbta" method="post">
-      <label for="place_name">Enter a place or address:</label>
-      <input
-        type="text"
-        id="place_name"
-        name="place_name"
-        placeholder="e.g. Boston Common"
-        required
-      />
-      <button type="submit">Search</button>
-    </form>
-  </body>
+    <p><strong>Station:</strong> {{ station }}</p>
+    <p><strong>Accessibility:</strong> {{ accessibility }}</p>
+
+    <a href="/">Search again</a>
+</body>
 </html>
+
 
