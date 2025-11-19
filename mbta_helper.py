@@ -75,8 +75,6 @@ def find_stop_near(place_name: str):
         return None, None
 
     return get_nearest_station(lat, lon)
-
-
 if __name__ == "__main__":
     print("Testing with: Boston Common")
     lat, lon = get_lat_lon("Boston Common")

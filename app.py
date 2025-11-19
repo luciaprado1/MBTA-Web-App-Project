@@ -1,35 +1,37 @@
-from flask import Flask, request, render_template
-import mbta_helper
+from flask import Flask, render_template, request
+from mbta_helper import find_stop_near   # your helper file
 
 app = Flask(__name__)
 
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 def index():
-    return render_template("index.html")
+    if request.method == "POST":
+        # get the value from the form
+        place_name = request.form.get("place_name", "").strip()
+        print("PLACE FROM FORM:", repr(place_name))  # DEBUG
 
+        if not place_name:
+            # if the user didn’t type anything
+            return render_template("error.html",
+                                   message="Please enter a location.")
 
-@app.route("/nearest_mbta", methods=["POST"])
-def nearest_mbta():
-    place = request.form.get("place")
+        try:
+            station, accessible = find_stop_near(place_name)
+        except Exception as e:
+            print("ERROR in find_stop_near:", e)
+            return render_template("error.html",
+                                   message="There was a problem finding a station.")
 
-    if not place:
-        return render_template("error.html", message="Please enter a place.")
-
-    station, accessibility = mbta_helper.find_stop_near(place)
-
-    if station is None:
         return render_template(
-            "error.html",
-            message=f"No MBTA stop found near '{place}'."
+            "mbta_station.html",
+            place_name=place_name,
+            station=station,
+            accessible=accessible
         )
 
-    return render_template(
-        "mbta_station.html",
-        place=place,
-        station=station,
-        accessibility=accessibility,
-    )
+    # GET request → just show the form
+    return render_template("index.html")
 
 
 if __name__ == "__main__":

@@ -1,16 +1,15 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <title>MBTA Station Result</title>
-</head>
-<body>
-    <h2>Nearest MBTA Station to "{{ place }}"</h2>
+  <head>
+    <title>MBTA Finder</title>
+  </head>
+  <body>
+    <h1>Find the nearest MBTA station</h1>
 
-    <p><strong>Station:</strong> {{ station }}</p>
-    <p><strong>Accessibility:</strong> {{ accessibility }}</p>
-
-    <a href="/">Search again</a>
-</body>
+    <form action="{{ url_for('index') }}" method="POST">
+      <label for="place_name">Enter a place or address:</label><br>
+      <input type="text" id="place_name" name="place_name" required>
+      <button type="submit">Search</button>
+    </form>
+  </body>
 </html>
-
-
