@@ -1,49 +1,58 @@
-import os
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
+# -------------------------------
+# Geocoding with Nominatim
+# -------------------------------
 
-MAPBOX_TOKEN = os.getenv("MAPBOX_TOKEN")
-MBTA_API_KEY = os.getenv("MBTA_API_KEY")
-
-MAPBOX_BASE_URL = "https://api.mapbox.com/search/searchbox/v1/forward"
-MBTA_BASE_URL = "https://api-v3.mbta.com/stops"
-
-
-def get_json(url: str, params: dict = None):
-    """Return parsed JSON from a URL request."""
-    response = requests.get(url, params=params)
-    print ("REQUEST URL:", response.url)  # DEBUG
-    response.raise_for_status()
-    return response.json()
-
-
-def get_lat_lon(place_name: str):
-    """Convert a place name into (lat, lon) using Mapbox."""
+def get_lat_lng(place_name: str):
+    """
+    Convert a place name into (lat, lon) using Nominatim.
+    Raises an Exception if something goes wrong.
+    """
+    url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": place_name,
-        "access_token": MAPBOX_TOKEN,
+        "format": "json",
         "limit": 1,
     }
 
-    data = get_json(MAPBOX_BASE_URL, params=params)
-    features = data.get("features", [])
+    # IMPORTANT: realistic User-Agent so Nominatim doesn't block you
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    }
 
-    if not features:
-        return None, None
+    resp = requests.get(url, params=params, headers=headers, timeout=10)
 
-    center = features[0]["geometry"]["coordinates"]
-    lon, lat = center[0], center[1]
+    try:
+        data = resp.json()
+    except Exception:
+        # Helpful debug print
+        print("DEBUG Nominatim response text:", resp.text[:500])
+        raise Exception("Geocoding service returned invalid data.")
+
+    if not data:
+        raise Exception("Location not found from geocoding.")
+
+    lat = float(data[0]["lat"])
+    lon = float(data[0]["lon"])
     return lat, lon
 
 
-def get_nearest_station(lat, lon):
-    """Return the closest MBTA station name and wheelchair accessibility."""
-    url = MBTA_BASE_URL
+# -------------------------------
+# MBTA API – nearest stop
+# -------------------------------
+
+def find_stop_near(place_name: str):
+    """
+    Given a place name, return (station_name, accessible_bool).
+    Raises an Exception if something fails.
+    """
+    # Step 1: get coordinates
+    lat, lon = get_lat_lng(place_name)
+
+    # Step 2: call MBTA API
+    url = "https://api-v3.mbta.com/stops"
     params = {
-        "api_key": MBTA_API_KEY,
-        "sort": "distance",
         "filter[latitude]": lat,
         "filter[longitude]": lon,
     }
@@ -86,4 +95,3 @@ if __name__ == "__main__":
 
 
 
-# hola prueba 

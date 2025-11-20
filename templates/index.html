@@ -1,14 +1,24 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8">
     <title>MBTA Finder</title>
   </head>
   <body>
-    <h1>Find the nearest MBTA station</h1>
+    <h1>Find the Closest MBTA Station</h1>
 
-    <form action="{{ url_for('index') }}" method="POST">
-      <label for="place_name">Enter a place or address:</label><br>
-      <input type="text" id="place_name" name="place_name" required>
+    <form method="POST" action="/">
+      <label for="place_name">Enter a place or address:</label><br><br>
+
+      <input 
+        type="text" 
+        id="place_name" 
+        name="place_name" 
+        placeholder="Boston Common" 
+        required
+      >
+      <br><br>
+
       <button type="submit">Search</button>
     </form>
   </body>
