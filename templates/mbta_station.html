@@ -3,8 +3,10 @@
   <head>
     <meta charset="utf-8">
     <title>Closest MBTA Station</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
   <body>
+    <div class="container">
     <h1>Closest MBTA Station</h1>
 
     <p>
@@ -12,7 +14,7 @@
       <strong>{{ station }}</strong>.
     </p>
 
-    {% if accessible %}
+    {% if accessible == "Wheelchair accessible" %}
       <p>This station is listed as <strong>wheelchair accessible</strong>.</p>
     {% else %}
       <p>
@@ -30,6 +32,7 @@
     {% endif %}
 
     <p><a href="{{ url_for('index') }}">Search again</a></p>
+    </div>
   </body>
 </html>
 

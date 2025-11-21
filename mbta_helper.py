@@ -38,7 +38,7 @@ def get_lat_lng(place_name: str):
     except Exception:
         # Helpful debug print
         print("DEBUG Nominatim response:", resp.text[:300])
-        raise Exception("Geocoding returned invalida data and JSON response.")
+        raise Exception("Geocoding returned invalid data and JSON response.")
 
     if not data:
         raise Exception("Geocoding did not found location.")
@@ -49,7 +49,7 @@ def get_lat_lng(place_name: str):
 
 
 def get_json(url, params=None):
-    """Returms JSON from the MBTA API"""
+    """Returns JSON from the MBTA API"""
     headers = {
         "accept":"application/json"
     }
@@ -68,7 +68,7 @@ def get_json(url, params=None):
 
 def find_nearest_station(lat: float, lon: float):
     """
-    Given a place name, return (station_name, accessible_str).
+    Given a place name, return (station_name, accessible_str, and stop_id).
     Raises an Exception if something fails.
     """
     #Step 1: Set up the url and parameters
@@ -84,7 +84,7 @@ def find_nearest_station(lat: float, lon: float):
     stops = data.get("data", [])
 
     if not stops:
-        return None, None
+        return None, None,None 
 
     first = stops[0]
     attributes = first ["attributes"]
@@ -103,7 +103,7 @@ def find_nearest_station(lat: float, lon: float):
 
 
 def find_stop_near(place_name: str):
-    """Main function: returns (station, accessibility)."""
+    """Main function: returns (station, accessibility, stop_id, lat, lon)."""
     lat, lon = get_lat_lng(place_name)
     name, accessible, stop_id = find_nearest_station(lat, lon)
     return name, accessible, stop_id, lat, lon
@@ -139,11 +139,13 @@ def time_to_next_arrival(stop_id):
     
 if __name__ == "__main__":
     print("Testing with: Boston Common")
-    lat, lon = get_lat_lng("Boston Common")
-    print("Coordinates:", (lat, lon))
     station, accessible, stop_id, lat, lon = find_stop_near("Boston Common")
+    print("Coordinates:", (lat, lon))
     print("Nearest station:", station)
     print("Accessibility:", accessible)
+    arrival_time, minutes_until = time_to_next_arrival(stop_id)
+    print("Next arrival at:", arrival_time)
+    print("Arrives in:", minutes_until, "minutes")
 
 
 

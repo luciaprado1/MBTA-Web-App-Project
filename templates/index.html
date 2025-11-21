@@ -3,8 +3,10 @@
   <head>
     <meta charset="utf-8">
     <title>MBTA Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
   <body>
+    <div class="container">
     <h1>Find the Closest MBTA Station</h1>
 
     <form method="POST" action="/">
@@ -17,7 +19,7 @@
         placeholder="Boston Common" 
         required
       >
-     <!-- Include mode of travel filter -->
+      <!-- Include mode of travel filter -->
 
       <label>Mode of travel:</label>
       <select name="route_type">
@@ -30,5 +32,6 @@
 
       <button type="submit">Search</button>
     </form>
+    </div>
   </body>
 </html>
