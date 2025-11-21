@@ -21,6 +21,14 @@
       </p>
     {% endif %}
 
+    <h3>Next Train/Bus Arrival</h3>
+    {% if arrival_time %}
+    <p>Next arrival at: <strong>{{ arrival_time }}</strong></p>
+    <p>Time until arrival: <strong>{{ minutes_until }} minutes</strong></p>
+    {% else %}
+    <p>No arrival predictions available.</p>
+    {% endif %}
+
     <p><a href="{{ url_for('index') }}">Search again</a></p>
   </body>
 </html>

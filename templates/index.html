@@ -8,7 +8,7 @@
     <h1>Find the Closest MBTA Station</h1>
 
     <form method="POST" action="/">
-      <label for="place_name">Enter a place or address:</label><br><br>
+      <label for="place_name">Enter a place or address:</label>
 
       <input 
         type="text" 
@@ -17,7 +17,16 @@
         placeholder="Boston Common" 
         required
       >
-      <br><br>
+     <!-- Include mode of travel filter -->
+
+      <label>Mode of travel:</label>
+      <select name="route_type">
+        <option value="">Any</option>
+        <option value="0">Light Rail (Green line)</option>
+        <option value="1">Subway (Red/Organge/Blue)</option>
+        <option value="2">Commuter Rail</option>
+        <option value="3">Bus</option>
+      </select>
 
       <button type="submit">Search</button>
     </form>

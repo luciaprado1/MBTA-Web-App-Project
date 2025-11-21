@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from mbta_helper import find_stop_near
+from mbta_helper import find_stop_near, time_to_next_arrival
 
 app = Flask(__name__)
 
@@ -19,7 +19,8 @@ def index():
             )
 
         try:
-            station, accessible = find_stop_near(place_name)
+            station, accessible, stop_id, lat, lon = find_stop_near(place_name)
+            arrival_time, minutes_until = time_to_next_arrival(stop_id)
             print("STATION RESULT:", station, "ACCESSIBLE:", accessible)  # DEBUG
         except Exception as e:
             # print the error for debugging
@@ -35,12 +36,13 @@ def index():
                 message="No nearby MBTA stations were found."
             )
 
-        # success
         return render_template(
             "mbta_station.html",
             place=place_name,
             station=station,
             accessible=accessible,
+            arrival_time=arrival_time, 
+            minutes_until=minutes_until,
         )
 
     # GET request – show the form

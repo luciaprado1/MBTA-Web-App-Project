@@ -1,4 +1,15 @@
 import requests
+import os
+ 
+
+# Load MBTA API key from environment variable
+from dotenv import load_dotenv
+load_dotenv()
+MBTA_API_KEY = os.getenv("MBTA_API_KEY")
+
+if not MBTA_API_KEY: 
+    raise RuntimeError("Missing MBTA_API_KEY")
+
 
 # -------------------------------
 # Geocoding with Nominatim
@@ -16,9 +27,8 @@ def get_lat_lng(place_name: str):
         "limit": 1,
     }
 
-    # IMPORTANT: realistic User-Agent so Nominatim doesn't block you
     headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+        "User-Agent": "MBTA Helper App - OIM Course"
     }
 
     resp = requests.get(url, params=params, headers=headers, timeout=10)
@@ -27,32 +37,45 @@ def get_lat_lng(place_name: str):
         data = resp.json()
     except Exception:
         # Helpful debug print
-        print("DEBUG Nominatim response text:", resp.text[:500])
-        raise Exception("Geocoding service returned invalid data.")
+        print("DEBUG Nominatim response:", resp.text[:300])
+        raise Exception("Geocoding returned invalida data and JSON response.")
 
     if not data:
-        raise Exception("Location not found from geocoding.")
+        raise Exception("Geocoding did not found location.")
 
     lat = float(data[0]["lat"])
     lon = float(data[0]["lon"])
     return lat, lon
 
 
+def get_json(url, params=None):
+    """Returms JSON from the MBTA API"""
+    headers = {
+        "accept":"application/json"
+    }
+
+    resp= requests.get(url,params=params, headers=headers,timeout=10)
+
+    try:
+        return resp.json()
+    except Exception:
+        print("Debug MBTA response:", resp.text[:300])
+        raise Exception("MBTA API returned invalid JSON")
+
 # -------------------------------
 # MBTA API – nearest stop
 # -------------------------------
 
-def find_stop_near(place_name: str):
+def find_nearest_station(lat: float, lon: float):
     """
-    Given a place name, return (station_name, accessible_bool).
+    Given a place name, return (station_name, accessible_str).
     Raises an Exception if something fails.
     """
-    # Step 1: get coordinates
-    lat, lon = get_lat_lng(place_name)
-
-    # Step 2: call MBTA API
+    #Step 1: Set up the url and parameters
     url = "https://api-v3.mbta.com/stops"
     params = {
+        "api_key": MBTA_API_KEY,
+        "sort": "distance",
         "filter[latitude]": lat,
         "filter[longitude]": lon,
     }
@@ -64,8 +87,9 @@ def find_stop_near(place_name: str):
         return None, None
 
     first = stops[0]
-    name = first["attributes"]["name"]
-    wheelchair = first["attributes"]["wheelchair_boarding"]
+    attributes = first ["attributes"]
+    name = attributes["name"]
+    wheelchair = attributes["wheelchair_boarding"]
 
     if wheelchair == 1:
         accessible = "Wheelchair accessible"
@@ -74,22 +98,50 @@ def find_stop_near(place_name: str):
     else:
         accessible = "Accessibility unknown"
 
-    return name, accessible
+    stop_id = first["id"]
+    return name, accessible, stop_id 
 
 
 def find_stop_near(place_name: str):
     """Main function: returns (station, accessibility)."""
-    lat, lon = get_lat_lon(place_name)
+    lat, lon = get_lat_lng(place_name)
+    name, accessible, stop_id = find_nearest_station(lat, lon)
+    return name, accessible, stop_id, lat, lon
 
-    if lat is None:
+#WOW factor - including the time of each bus in the station
+def time_to_next_arrival(stop_id):
+    """Returns next arrival time for the mode of transportation """
+    url = "https://api-v3.mbta.com/predictions"
+    params={
+        "api_key": MBTA_API_KEY,
+        "filter[stop]":stop_id,
+        "sort": "arrival_time"
+    }
+    data = get_json(url, params)
+    time_predictions = data.get("data", [])
+
+    if not time_predictions:
+        return None,None
+    
+    attrs = time_predictions[0]["attributes"]
+    arrival_str = attrs.get("arrival_time")
+
+    if not arrival_str:
         return None, None
+    
+    from datetime import datetime, timezone 
 
-    return get_nearest_station(lat, lon)
+    arrival = datetime.fromisoformat(arrival_str.replace("Z","+00:00"))
+    now = datetime.now(timezone.utc)
+    minutes= round ((arrival - now).total_seconds() / 60)
+    arrival_time_str= arrival.strftime("%I:%M %p")
+    return arrival_time_str, minutes
+    
 if __name__ == "__main__":
     print("Testing with: Boston Common")
-    lat, lon = get_lat_lon("Boston Common")
+    lat, lon = get_lat_lng("Boston Common")
     print("Coordinates:", (lat, lon))
-    station, accessible = find_stop_near("Boston Common")
+    station, accessible, stop_id, lat, lon = find_stop_near("Boston Common")
     print("Nearest station:", station)
     print("Accessibility:", accessible)
 
